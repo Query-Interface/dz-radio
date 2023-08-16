@@ -1,0 +1,39 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: dzplaylist
+  labels:
+    app: dzplaylist
+spec:
+  selector:
+    app: dzplaylist
+  ports:
+    - port: 8080
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: dzplaylist
+  labels:
+    app: dzplaylist
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dzplaylist
+  template:
+    metadata:
+      labels:
+        app: dzplaylist
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "dzplaylist"
+        dapr.io/app-port: "8080"
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: playlist
+        image: docker.io/queryinterface/radio-playlist
+        ports:
+        - containerPort: 8080

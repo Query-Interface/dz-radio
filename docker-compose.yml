@@ -1,0 +1,88 @@
+version: '3'
+volumes:
+  radio-db-data:
+services:
+  ############################
+  # dz-playlist app
+  ############################
+#  dz-playlist:
+#    build: ./dz-playlist
+#    ports:
+#      - "20080:8080"
+#    depends_on:
+#      - kafka
+#    networks:
+#      - radio
+
+  ############################
+  # postgresql 
+  ############################  
+  radio-db:
+    image: 'postgres:15.3-alpine'
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin # The PostgreSQL user (useful to connect to the database)
+      POSTGRES_PASSWORD: Password1 # The PostgreSQL password (useful to connect to the database)
+      POSTGRES_DB: radio # The PostgreSQL default database (automatically created at first launch)
+    volumes:
+      - radio-db-data:/var/lib/postgresql/data/
+      # The init script will be executed when the database is first run
+      #- ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - radio
+  
+  ############################
+  # kafka 
+  ############################  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - '22181:2181'
+    networks:
+      - radio
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - '29092:29092'
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - radio
+  akhq:
+    image: tchiotludo/akhq
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            docker-kafka-server:
+              properties:
+                bootstrap.servers: "kafka:9092"
+    depends_on:
+     - kafka
+    ports:
+      - 8080:8080
+    links:
+      - kafka
+    networks:
+      - radio
+  ###########################
+  # min.io
+  ############################ 
+  
+  ###########################
+  # vault 
+  ############################ 
+networks:
+    radio:

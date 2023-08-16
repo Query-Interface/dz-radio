@@ -1,0 +1,111 @@
+version: '3'
+services:
+  ############################
+  # dz-playlist app + Dapr sidecar
+  ############################
+  dz-playlist:
+    build: ./dz-playlist
+    ports:
+      - "50002:50002"
+      - "20080:8080"
+      - "3500:3500"
+    depends_on:
+      - kafka
+      - placement
+    networks:
+      - dz-dapr
+  dz-playlist-dapr:
+    image: "daprio/daprd:edge"
+    command: ["./daprd",
+     "-app-id", "dz-playlist",
+     "-app-port", "8080",
+     "-placement-host-address", "placement:50006",
+     "-dapr-grpc-port", "50002",
+     "-enable-api-logging",
+     "-app-protocol", "http",
+     "-dapr-http-port", "3500",
+     "-components-path", "/components"]
+    volumes:
+        - "./components/:/components"
+    depends_on:
+      - dz-playlist
+    network_mode: "service:dz-playlist"
+
+  ############################
+  # Python app + Dapr sidecar
+  ############################
+#  pythonapp:
+#    build: ./python
+#    depends_on:
+#      - redis
+#      - placement
+ #   networks:
+ #     - hello-dapr
+ # pythonapp-dapr:
+ #   image: "daprio/daprd:edge"
+ #   command: ["./daprd",
+#    "-app-id", "pythonapp",
+#    "-placement-host-address", "placement:50006",
+#     "-components-path", "/components"]
+#    volumes:
+#      - "./components/:/components"
+#    depends_on:
+#      - pythonapp
+#    network_mode: "service:pythonapp"
+  ############################
+  # Dapr placement service
+  ############################
+  placement:
+    image: "daprio/dapr"
+    command: ["./placement", "-port", "50006"]
+    ports:
+      - "50006:50006"
+    networks:
+      - dz-dapr
+  ############################
+  # kafka 
+  ############################  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - '22181:2181'
+    networks:
+      - dz-dapr
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - '29092:29092'
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - dz-dapr
+  akhq:
+    image: tchiotludo/akhq
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            docker-kafka-server:
+              properties:
+                bootstrap.servers: "kafka:9092"
+    depends_on:
+     - kafka
+    ports:
+      - 8080:8080
+    links:
+      - kafka
+    networks:
+      - dz-dapr
+networks:
+    dz-dapr:
