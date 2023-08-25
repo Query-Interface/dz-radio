@@ -1,10 +1,11 @@
 FROM eclipse-temurin:17-jdk-jammy as builder
 WORKDIR /opt/app
 COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline
+COPY mvnw mvnw
+COPY pom.xml pom.xml
+RUN /opt/app/mvnw dependency:go-offline
 COPY ./src ./src
-RUN ./mvnw clean install -DskipTests=true
+RUN /opt/app/mvnw clean install -DskipTests=true
  
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /opt/app

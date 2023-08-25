@@ -1,9 +1,11 @@
 version: '3'
 volumes:
   radio-db-data:
+  dl-data:
+  minio-data:
 services:
   ############################
-  # dz-playlist app
+  # Radio backend apps
   ############################
 #  dz-playlist:
 #    build: ./dz-playlist
@@ -14,6 +16,17 @@ services:
 #    networks:
 #      - radio
 
+  yt-dl:
+    build: ./yt-dl
+    ports:
+      - "20080:8080"
+    depends_on:
+      - kafka
+      - objectstore
+    networks:
+      - radio
+    volumes:
+      - dl-data:/home/dockeruser/videos
   ############################
   # postgresql 
   ############################  
@@ -80,7 +93,19 @@ services:
   ###########################
   # min.io
   ############################ 
-  
+  objectstore:
+    image: quay.io/minio/minio:RELEASE.2023-08-23T10-07-06Z
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio-data:/data
+    ports:
+    - 9000:9000
+    - 9090:9090
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: Password1
+    networks:
+      - radio
   ###########################
   # vault 
   ############################ 
