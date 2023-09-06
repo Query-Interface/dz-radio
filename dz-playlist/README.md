@@ -1,5 +1,9 @@
 # dz-playlist
 Use the Deezer API to get tracks from a public playlist
+Store tracks in its own database.
+Is able to detect new tracks.
+When new track are identified, it creates a Kafka command to request the Search of this track in Youtube.
+Then it basically behaves has a saga orchestrator that follows the evolution of the process by consumming the events/commands send on Kafka.
 
 # TODOs
 
